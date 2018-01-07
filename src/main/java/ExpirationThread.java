@@ -5,8 +5,8 @@ import java.util.HashSet;
 
 /**
  * Thread responsible for removing elements from @see ExpireMap based on the timeout provided for that element.
- * Internally it holds multimap of expirationTime->(Keys-to-expire) mapping, which allows to quickly find the next
- * set of keys to expire. Since expirationTime is the key in the expiration map, first key is always the next one
+ * Internally it holds multimap of expirationTime->(Keys-to-expire) mapping, which allows to quickly find the set
+ * of keys to expire. Since expirationTime is the key in the expiration map, first key is always the next one
  * to be expired.
  *
  * @author acolovic
