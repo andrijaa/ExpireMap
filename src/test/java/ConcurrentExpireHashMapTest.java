@@ -46,7 +46,7 @@ class ConcurrentExpireHashMapTest {
   }
 
   @Test
-  void readdingWithSameKey() throws InterruptedException {
+  void readingWithSameKey() throws InterruptedException {
     ExpireMap<String, String> testMap = new ConcurrentExpireHashMap<>();
     testMap.put("key1", "value1",1000);
     assertEquals("value1", testMap.get("key1"));
