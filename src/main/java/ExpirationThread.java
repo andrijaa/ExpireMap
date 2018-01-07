@@ -20,6 +20,46 @@ public class ExpirationThread extends Thread {
     this.expireMap = expireMap;
   }
 
+  @Override
+  public void run() {
+    while (true) {
+      try {
+        consume();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  /**
+   * Consumer logic called by our ExpirationThread run loop.
+   * <p>
+   * 1. If no keys are to be expired, we just wait until Producer(ExpireMap) notifies us
+   * 2. If there is a key in the map; we first check if it is time to expire that key. If not, we wait
+   * the amount of time left to expire that key. This avoids unnecessary work by thread.
+   * 3. Waiting operation is interrupted if a key is added/removed. And our code execution goes back to step #1.
+   * <p>
+   * Note that we process all keys that are supposed to expire in iteration in our dispatch loop.
+   *
+   * @throws InterruptedException
+   */
+  private synchronized void consume() throws InterruptedException {
+    if (!expirationMultiMap.isEmpty()) {
+      Map.Entry<Long, Set<Object>> expirationMapEntry = expirationMultiMap.entrySet().iterator().next();
+      Long currentTimeMillis = System.currentTimeMillis();
+      Long expirationTimeMillis = expirationMapEntry.getKey();
+      if (expirationTimeMillis < currentTimeMillis) { // Is expired?
+        for (Object keyToExpire : expirationMapEntry.getValue()) { // Handle all elements that need to expire
+          expireElement(expirationTimeMillis, keyToExpire);
+        }
+      } else { // Key not expired yet
+        wait(expirationTimeMillis - currentTimeMillis);
+      }
+    } else { // queue empty
+      wait();
+    }
+  }
+
   /**
    * Producer method that removes a key from our expiration queue
    *
@@ -52,36 +92,6 @@ public class ExpirationThread extends Thread {
     notify();
   }
 
-  /**
-   * Consumer logic called by our ExpirationThread run loop.
-   * <p>
-   * 1. If no keys are to be expired, we just wait until Producer(ExpireMap) notifies us
-   * 2. If there is a key in the map; we first check if it is time to expire that key. If not, we wait
-   * the amount of time left to expire that key. This avoids unnecessary work by thread.
-   * 3. Waiting operation is interrupted if a key is added/removed. And our code execution goes back to step #1.
-   * <p>
-   * Note that we process all keys that are supposed to expire in iteration in our dispatch loop.
-   *
-   * @throws InterruptedException
-   */
-  private synchronized void consume() throws InterruptedException {
-    if (!expirationMultiMap.isEmpty()) {
-      Map.Entry<Long, Set<Object>> expirationMapEntry = expirationMultiMap.entrySet().iterator().next();
-      Long currentTimeMillis = System.currentTimeMillis();
-      Long expirationTimeMillis = expirationMapEntry.getKey();
-      if (expirationTimeMillis < currentTimeMillis) { // Is expired?
-        for (Object keyToExpire : expirationMapEntry.getValue()) { // Handle all elements that need to expire
-          expireElement(expirationTimeMillis, keyToExpire);
-        }
-      } else { // Key not expired yet
-        wait(expirationTimeMillis - currentTimeMillis);
-      }
-    } else { // queue empty
-      wait();
-    }
-  }
-
-
   private synchronized void expireElement(Long expirationTimeMillis, Object key) throws InterruptedException {
     Set<Object> keys = expirationMultiMap.get(expirationTimeMillis);
     if (keys != null) {
@@ -95,16 +105,5 @@ public class ExpirationThread extends Thread {
 
   public synchronized int expirationQueueSize() {
     return expirationMultiMap.size();
-  }
-
-  @Override
-  public void run() {
-    while (true) {
-      try {
-        consume();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
   }
 }
