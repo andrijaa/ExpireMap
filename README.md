@@ -33,9 +33,9 @@ interface ExpireMap<K,V> {
 ```
 
 ## Implementation
-<b>ConcurrentExpireHashMap</b> is an implementation of <b>ExpireMap</b> interface. It supports access from multiple threads by using internally ConcurrentHashMap which ensures thread safety. On map creation, ConcurrentExpireHashMap starts a  background thread(<b>ExpirationThread)</b> that performs cleanup of expired keys. Background thread communicates with the thread(s) using the map via notify()/wait() approach.
+<b>ConcurrentExpireHashMap</b> is an implementation of <b>ExpireMap</b> interface. It supports access from multiple threads by using internally ConcurrentHashMap which ensures thread safety. On map creation, ConcurrentExpireHashMap starts a  background thread(<b>ExpirationThread)</b> that performs cleanup of expired keys. Thread(s) using ConcurrentExpireHashMap communicate with background thread via notify()/wait() approach.
 
-Expiration thread will wait until the next expiration is supposed to occur, before it kicks off removal of that key. This ensures the thread only is active when needed for best performance. If the new key is added, expiration thread will check to see if the newly added key needs to be removed sooner than the current wait; and adjust accordingly. If key removal occurs, we also cleanup any associated timeout info from the background thread. 
+Expiration thread will wait until the next expiration is supposed to occur, before it kicks off removal of that key. This ensures the thread only is active when needed for best performance. If the new key is added, expiration thread will check to see if the newly added key needs to be removed sooner than the current wait; and adjust waiting accordingly. If key removal occurs, we also cleanup any associated timeout info from the background thread. 
 
 ## Performance
 Lookup via <b><i>get(K key)</i></b> in the map is <u>O(log n)</u>. 
