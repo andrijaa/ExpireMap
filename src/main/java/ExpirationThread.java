@@ -50,7 +50,8 @@ public class ExpirationThread extends Thread {
       Long expirationTimeMillis = expirationMapEntry.getKey();
       if (expirationTimeMillis < currentTimeMillis) { // Is expired?
         for (Object keyToExpire : expirationMapEntry.getValue()) { // Handle all elements that need to expire
-          expireElement(expirationTimeMillis, keyToExpire);
+          //expireElement(expirationTimeMillis, keyToExpire);
+          expireMap.remove(keyToExpire);
         }
       } else { // Key not expired yet
         wait(expirationTimeMillis - currentTimeMillis);
@@ -64,11 +65,10 @@ public class ExpirationThread extends Thread {
    * Producer method that removes a key from our expiration queue
    *
    * @param key          key to be expired
-   * @param timeoutMilis when to expire the key
+   * @param expiration when to expire the key
    */
-  public synchronized void addExpiration(Object key, long timeoutMilis) {
-    Long expireTime = System.currentTimeMillis() + timeoutMilis;
-    Set<Object> keysToExpire = expirationMultiMap.computeIfAbsent(expireTime, k -> new HashSet<>());
+  public synchronized void addExpiration(Object key, long expiration) {
+    Set<Object> keysToExpire = expirationMultiMap.computeIfAbsent(expiration, k -> new HashSet<>());
     keysToExpire.add(key);
     notify();
   }
@@ -78,21 +78,12 @@ public class ExpirationThread extends Thread {
    *
    * @param key key/expiration pair to be removed
    */
-  public synchronized void removeExpiration(Object key) {
-    for (Map.Entry<Long, Set<Object>> mapEntry : expirationMultiMap.entrySet()) {
-      Set<Object> keys = mapEntry.getValue();
-      if (keys.contains(key)) {
-        keys.remove(key);
-        if (keys.isEmpty()) {
-          expirationMultiMap.remove(mapEntry.getKey());
-        }
-        break;
-      }
-    }
+  public synchronized void removeExpiration(Long expirationTimeMillis, Object key) {
+    expireElement(expirationTimeMillis, key);
     notify();
   }
 
-  private synchronized void expireElement(Long expirationTimeMillis, Object key) throws InterruptedException {
+  private synchronized void expireElement(Long expirationTimeMillis, Object key) {
     Set<Object> keys = expirationMultiMap.get(expirationTimeMillis);
     if (keys != null) {
       keys.remove(key);
@@ -100,7 +91,6 @@ public class ExpirationThread extends Thread {
         expirationMultiMap.remove(expirationTimeMillis);
       }
     }
-    expireMap.remove(key);
   }
 
   public synchronized int expirationQueueSize() {

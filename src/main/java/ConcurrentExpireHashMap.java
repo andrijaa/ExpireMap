@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConcurrentExpireHashMap<K, V> implements ExpireMap<K, V> {
 
-  private ConcurrentHashMap<K, V> internalMap;
+  private ConcurrentHashMap<K, ValueExpirationPair> internalMap;
   private ExpirationThread expirationThread;
 
   public ConcurrentExpireHashMap() {
@@ -22,10 +22,11 @@ public class ConcurrentExpireHashMap<K, V> implements ExpireMap<K, V> {
 
   @Override
   public void put(K key, V value, long timeoutMs) {
-    if (internalMap.put(key, value) != null) {
-      expirationThread.removeExpiration(key); // remove previous expiration if Key-Value updated
+    Long expiration = System.currentTimeMillis() + timeoutMs;
+    if (internalMap.put(key, new ValueExpirationPair(value, expiration)) != null) {
+      expirationThread.removeExpiration(expiration, key); // remove previous expiration if Key-Value updated
     }
-    expirationThread.addExpiration(key, timeoutMs);
+    expirationThread.addExpiration(key, expiration);
   }
 
   @Override
@@ -35,8 +36,9 @@ public class ConcurrentExpireHashMap<K, V> implements ExpireMap<K, V> {
 
   @Override
   public void remove(Object key) {
-    if (internalMap.remove(key) != null) {
-      expirationThread.removeExpiration(key);
+    ValueExpirationPair valueExpirationPair = internalMap.remove(key);
+    if (valueExpirationPair != null) {
+      expirationThread.removeExpiration(valueExpirationPair.getExpiration(), key);
     }
   }
 
