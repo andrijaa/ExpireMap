@@ -45,15 +45,14 @@ public class ExpirationThread extends Thread {
    */
   private synchronized void consume() throws InterruptedException {
     if (!expirationMultiMap.isEmpty()) {
-      Map.Entry<Long, Set<Object>> expirationMapEntry = expirationMultiMap.entrySet().iterator().next();
+      Map.Entry<Long, Set<Object>> nextToExpire = expirationMultiMap.entrySet().iterator().next();
       Long currentTimeMillis = System.currentTimeMillis();
-      Long expirationTimeMillis = expirationMapEntry.getKey();
-      if (expirationTimeMillis < currentTimeMillis) { // Is expired?
-        for (Object keyToExpire : expirationMapEntry.getValue()) { // Handle all elements that need to expire
-          //expireElement(expirationTimeMillis, keyToExpire);
-          expireMap.remove(keyToExpire);
+      Long expirationTimeMillis = nextToExpire.getKey();
+      if (expirationTimeMillis < currentTimeMillis) { // Is it time to expire Set<Key>?
+        for (Object key : nextToExpire.getValue()) {
+          expireMap.remove(key);
         }
-      } else { // Key not expired yet
+      } else { // Key not expired yet, wait until it is time to expire it
         wait(expirationTimeMillis - currentTimeMillis);
       }
     } else { // queue empty
@@ -93,7 +92,7 @@ public class ExpirationThread extends Thread {
     }
   }
 
-  public synchronized int expirationQueueSize() {
+  public synchronized int expirationMapSize() {
     return expirationMultiMap.size();
   }
 }

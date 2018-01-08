@@ -1,3 +1,8 @@
+/**
+ *  Helper Pair class used in our internal map to keep track of relationship in between Value and Expiration time
+ *
+ *  @author acolovic
+ */
 public class ValueExpirationPair<T> {
 
   private T value;
